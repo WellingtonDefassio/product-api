@@ -5,7 +5,10 @@ import com.example.productapi.modules.category.dto.CategoryRequest;
 import com.example.productapi.modules.category.dto.CategoryResponse;
 import com.example.productapi.modules.product.dto.ProductRequest;
 import com.example.productapi.modules.product.dto.ProductResponse;
+import com.example.productapi.modules.product.dto.ProductSalesResponse;
+import com.example.productapi.modules.product.dto.ProductStockDTO;
 import com.example.productapi.modules.product.service.ProductService;
+import com.example.productapi.modules.sales.dto.ProductStockCheckRequest;
 import com.example.productapi.modules.supplier.dto.SupplierResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -55,6 +58,16 @@ public class ProductController {
     @DeleteMapping("{id}")
     public SuccessResponse deleteById(@PathVariable Integer id) {
         return productService.delete(id);
+    }
+
+    @PostMapping("check-stock")
+    public SuccessResponse checkProductStock(@RequestBody ProductStockCheckRequest request) {
+        return productService.checkProductStock(request);
+    }
+
+    @GetMapping("{id}/sales")
+    public ProductSalesResponse findProductSales(@PathVariable Integer id) {
+        return productService.findProductSales(id);
     }
 
 }

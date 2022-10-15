@@ -3,12 +3,11 @@ package com.example.productapi.modules.product.service;
 import com.example.productapi.config.exception.SuccessResponse;
 import com.example.productapi.config.exception.ValidationException;
 import com.example.productapi.modules.category.service.CategoryService;
-import com.example.productapi.modules.product.dto.ProductQuantityDTO;
-import com.example.productapi.modules.product.dto.ProductRequest;
-import com.example.productapi.modules.product.dto.ProductResponse;
-import com.example.productapi.modules.product.dto.ProductStockDTO;
+import com.example.productapi.modules.product.dto.*;
 import com.example.productapi.modules.product.model.Product;
 import com.example.productapi.modules.product.repository.ProductRepository;
+import com.example.productapi.modules.sales.client.SalesClient;
+import com.example.productapi.modules.sales.dto.ProductStockCheckRequest;
 import com.example.productapi.modules.sales.dto.SalesConfirmationDTO;
 import com.example.productapi.modules.sales.enums.SalesStatus;
 import com.example.productapi.modules.sales.rabbitmq.SalesConfirmationSender;
@@ -36,6 +35,8 @@ public class ProductService {
     private SupplierService supplierService;
     @Autowired
     private SalesConfirmationSender salesConfirmationSender;
+    @Autowired
+    private SalesClient salesClient;
 
 
     public ProductResponse save(ProductRequest productRequest) {
@@ -209,5 +210,35 @@ public class ProductService {
 
     }
 
+    public ProductSalesResponse findProductSales(Integer id) {
+        var product = findById(id);
+        try {
+            var sales = salesClient.findSalesByProductId(product.getId())
+                    .orElseThrow(() -> new ValidationException("The sales was not found by this product."));
+            return ProductSalesResponse.of(product, sales.getSalesIds());
+        } catch (Exception e) {
+            throw new ValidationException("There was an error trying to get the product's sales.");
+        }
+    }
 
+
+    public SuccessResponse checkProductStock (ProductStockCheckRequest request) {
+        if(ObjectUtils.isEmpty(request) || ObjectUtils.isEmpty(request.getProducts())) {
+            throw new ValidationException("The request data must be informed");
+        }
+
+        request.getProducts().forEach(this::validateStock);
+        return SuccessResponse.create("The stock is ok!");
+    }
+
+    private void validateStock(ProductQuantityDTO productQuantity) {
+        if(ObjectUtils.isEmpty(productQuantity) || ObjectUtils.isEmpty(productQuantity.getProductId())) {
+            throw new ValidationException("Product Id and quantity must be informed");
+        }
+        var product = findById(productQuantity.getProductId());
+        if(productQuantity.getQuantity()> product.getQuantityAvailable()) {
+                throw new ValidationException(String.format("The product %s is out of stock.", product.getId()));
+        }
+
+    }
 }
